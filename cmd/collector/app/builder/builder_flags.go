@@ -40,7 +40,7 @@ type CollectorOptions struct {
 	// NumWorkers is the number of internal workers in a collector
 	NumWorkers int
 	// WriteCacheTTL denotes how often to check and re-write a service or operation name
-	WriteCacheTTL time.Duration
+	WriteCacheTTL time.Duration // TODO deprecate in favor of cmd/flags/cassandra.Options
 	// CollectorPort is the port that the collector service listens in on for tchannel requests
 	CollectorPort int
 	// CollectorHTTPPort is the port that the collector service listens in on for http requests

@@ -69,8 +69,10 @@ func (flags *SharedFlags) NewLogger(conf zap.Config, options ...zap.Option) (*za
 // SharedFlags holds flags configuration
 type SharedFlags struct {
 	// SpanStorage defines common settings for Span Storage.
+	// TODO deprecate in favor of env var
 	SpanStorage spanStorage
 	// DependencyStorage defines common settings for Dependency Storage.
+	// TODO deprecate in favor of cmd/flags/cassandra.Options
 	DependencyStorage dependencyStorage
 	// Logging holds logging configuration
 	Logging logging
