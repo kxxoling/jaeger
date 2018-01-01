@@ -22,6 +22,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/jaegertracing/jaeger/pkg/cassandra"
+	"github.com/jaegertracing/jaeger/pkg/cassandra/config"
 	cDepStore "github.com/jaegertracing/jaeger/plugin/storage/cassandra/dependencystore"
 	cSpanStore "github.com/jaegertracing/jaeger/plugin/storage/cassandra/spanstore"
 	"github.com/jaegertracing/jaeger/storage/dependencystore"
@@ -35,6 +36,7 @@ type Factory struct {
 	metricsFactory metrics.Factory
 	logger         *zap.Logger
 
+	primaryConfig  config.SessionBuilder
 	primarySession cassandra.Session
 	// archiveSession cassandra.Session TODO
 }
@@ -54,14 +56,14 @@ func (f *Factory) AddFlags(flagSet *flag.FlagSet) {
 // InitFromViper implements plugin.Configurable
 func (f *Factory) InitFromViper(v *viper.Viper) {
 	f.Options.InitFromViper(v)
+	f.primaryConfig = f.Options.GetPrimary()
 }
 
 // Initialize implements storage.Factory
 func (f *Factory) Initialize(metricsFactory metrics.Factory, logger *zap.Logger) error {
 	f.metricsFactory, f.logger = metricsFactory, logger
 
-	cfg := f.Options.GetPrimary()
-	primarySession, err := cfg.NewSession()
+	primarySession, err := f.primaryConfig.NewSession()
 	if err != nil {
 		return err
 	}

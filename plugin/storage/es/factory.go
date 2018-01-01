@@ -22,6 +22,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/jaegertracing/jaeger/pkg/es"
+	"github.com/jaegertracing/jaeger/pkg/es/config"
 	esDepStore "github.com/jaegertracing/jaeger/plugin/storage/es/dependencystore"
 	esSpanStore "github.com/jaegertracing/jaeger/plugin/storage/es/spanstore"
 	"github.com/jaegertracing/jaeger/storage/dependencystore"
@@ -35,6 +36,7 @@ type Factory struct {
 	metricsFactory metrics.Factory
 	logger         *zap.Logger
 
+	primaryConfig config.ClientBuilder
 	primaryClient es.Client
 }
 
@@ -53,14 +55,14 @@ func (f *Factory) AddFlags(flagSet *flag.FlagSet) {
 // InitFromViper implements plugin.Configurable
 func (f *Factory) InitFromViper(v *viper.Viper) {
 	f.Options.InitFromViper(v)
+	f.primaryConfig = f.Options.GetPrimary()
 }
 
 // Initialize implements storage.Factory
 func (f *Factory) Initialize(metricsFactory metrics.Factory, logger *zap.Logger) error {
 	f.metricsFactory, f.logger = metricsFactory, logger
 
-	cfg := f.Options.GetPrimary()
-	primaryClient, err := cfg.NewClient()
+	primaryClient, err := f.primaryConfig.NewClient()
 	if err != nil {
 		return err
 	}
@@ -71,13 +73,13 @@ func (f *Factory) Initialize(metricsFactory metrics.Factory, logger *zap.Logger)
 
 // CreateSpanReader implements storage.Factory
 func (f *Factory) CreateSpanReader() (spanstore.Reader, error) {
-	cfg := f.Options.GetPrimary()
+	cfg := f.primaryConfig
 	return esSpanStore.NewSpanReader(f.primaryClient, f.logger, cfg.GetMaxSpanAge(), f.metricsFactory), nil
 }
 
 // CreateSpanWriter implements storage.Factory
 func (f *Factory) CreateSpanWriter() (spanstore.Writer, error) {
-	cfg := f.Options.GetPrimary()
+	cfg := f.primaryConfig
 	return esSpanStore.NewSpanWriter(f.primaryClient, f.logger, f.metricsFactory, cfg.GetNumShards(), cfg.GetNumReplicas()), nil
 }
 

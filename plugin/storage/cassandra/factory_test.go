@@ -15,13 +15,53 @@
 package cassandra
 
 import (
+	"errors"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/uber/jaeger-lib/metrics"
+
+	"github.com/jaegertracing/jaeger/pkg/cassandra"
+	"github.com/jaegertracing/jaeger/pkg/cassandra/mocks"
+	"github.com/jaegertracing/jaeger/pkg/config"
+	"github.com/jaegertracing/jaeger/pkg/testutils"
 	"github.com/jaegertracing/jaeger/storage"
 )
 
 var _ storage.Factory = new(Factory)
 
-func TestFactory(t *testing.T) {
-	NewFactory()
+type mockSessionBuilder struct {
+	err error
+}
+
+func (m *mockSessionBuilder) NewSession() (cassandra.Session, error) {
+	if m.err == nil {
+		return &mocks.Session{}, nil
+	}
+	return nil, m.err
+}
+
+func TestCassandraFactory(t *testing.T) {
+	f := NewFactory()
+	v, command := config.Viperize(f.AddFlags)
+	command.ParseFlags([]string{})
+	f.InitFromViper(v)
+
+	logger, _ := testutils.NewLogger()
+	// after InitFromViper, f.primaryConfig points to a real sssion builder that will fail in unit tests
+	// so we override it with mock
+	f.primaryConfig = &mockSessionBuilder{err: errors.New("made-up error")}
+	assert.EqualError(t, f.Initialize(metrics.NullFactory, logger), "made-up error")
+
+	f.primaryConfig = &mockSessionBuilder{}
+	assert.NoError(t, f.Initialize(metrics.NullFactory, logger))
+
+	_, err := f.CreateSpanReader()
+	assert.NoError(t, err)
+
+	_, err = f.CreateSpanWriter()
+	assert.NoError(t, err)
+
+	_, err = f.CreateDependencyReader()
+	assert.NoError(t, err)
 }

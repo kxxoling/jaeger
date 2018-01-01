@@ -15,13 +15,55 @@
 package es
 
 import (
+	"errors"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/uber/jaeger-lib/metrics"
+
+	"github.com/jaegertracing/jaeger/pkg/config"
+	"github.com/jaegertracing/jaeger/pkg/es"
+	escfg "github.com/jaegertracing/jaeger/pkg/es/config"
+	"github.com/jaegertracing/jaeger/pkg/es/mocks"
+	"github.com/jaegertracing/jaeger/pkg/testutils"
 	"github.com/jaegertracing/jaeger/storage"
 )
 
 var _ storage.Factory = new(Factory)
 
+type mockClientBuilder struct {
+	escfg.Configuration
+	err error
+}
+
+func (m *mockClientBuilder) NewClient() (es.Client, error) {
+	if m.err == nil {
+		return &mocks.Client{}, nil
+	}
+	return nil, m.err
+}
+
 func TestFactory(t *testing.T) {
-	NewFactory()
+	f := NewFactory()
+	v, command := config.Viperize(f.AddFlags)
+	command.ParseFlags([]string{})
+	f.InitFromViper(v)
+
+	logger, _ := testutils.NewLogger()
+	// after InitFromViper, f.primaryConfig points to a real sssion builder that will fail in unit tests
+	// so we override it with mock
+	f.primaryConfig = &mockClientBuilder{err: errors.New("made-up error")}
+	assert.EqualError(t, f.Initialize(metrics.NullFactory, logger), "made-up error")
+
+	f.primaryConfig = &mockClientBuilder{}
+	assert.NoError(t, f.Initialize(metrics.NullFactory, logger))
+
+	_, err := f.CreateSpanReader()
+	assert.NoError(t, err)
+
+	_, err = f.CreateSpanWriter()
+	assert.NoError(t, err)
+
+	_, err = f.CreateDependencyReader()
+	assert.NoError(t, err)
 }
