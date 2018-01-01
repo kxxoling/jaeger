@@ -48,13 +48,9 @@ const (
 	suffixDepStoreDataFrequency  = ".dependency-store-data-frequency"
 )
 
-// TODO this should be moved next to config.Configuration struct (maybe ./flags package)
-
 // Options contains various type of Cassandra configs and provides the ability
 // to bind them to command line flag and apply overlays, so that some configurations
 // (e.g. archive) may be underspecified and infer the rest of its parameters from primary.
-//
-// TODO this can be moved to plugin/storage/cassandra.Factory
 type Options struct {
 	primary                *namespaceConfig
 	others                 map[string]*namespaceConfig

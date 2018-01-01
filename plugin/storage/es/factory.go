@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cassandra
+package es
 
 import (
 	"flag"
@@ -21,28 +21,27 @@ import (
 	"github.com/uber/jaeger-lib/metrics"
 	"go.uber.org/zap"
 
-	"github.com/jaegertracing/jaeger/pkg/cassandra"
-	cDepStore "github.com/jaegertracing/jaeger/plugin/storage/cassandra/dependencystore"
-	cSpanStore "github.com/jaegertracing/jaeger/plugin/storage/cassandra/spanstore"
+	"github.com/jaegertracing/jaeger/pkg/es"
+	esDepStore "github.com/jaegertracing/jaeger/plugin/storage/es/dependencystore"
+	esSpanStore "github.com/jaegertracing/jaeger/plugin/storage/es/spanstore"
 	"github.com/jaegertracing/jaeger/storage/dependencystore"
 	"github.com/jaegertracing/jaeger/storage/spanstore"
 )
 
-// Factory implements storage.Factory for Cassandra backend.
+// Factory implements storage.Factory for Elasticsearch backend.
 type Factory struct {
 	Options *Options
 
 	metricsFactory metrics.Factory
 	logger         *zap.Logger
 
-	primarySession cassandra.Session
-	// archiveSession cassandra.Session TODO
+	primaryClient es.Client
 }
 
 // NewFactory creates a new Factory.
 func NewFactory() *Factory {
 	return &Factory{
-		Options: NewOptions("cassandra"), // TODO add "cassandra-archive" once supported
+		Options: NewOptions("es"), // TODO add "es-archive" once supported
 	}
 }
 
@@ -61,26 +60,28 @@ func (f *Factory) Initialize(metricsFactory metrics.Factory, logger *zap.Logger)
 	f.metricsFactory, f.logger = metricsFactory, logger
 
 	cfg := f.Options.GetPrimary()
-	primarySession, err := cfg.NewSession()
+	primaryClient, err := cfg.NewClient()
 	if err != nil {
 		return err
 	}
-	f.primarySession = primarySession
+	f.primaryClient = primaryClient
 	// TODO init archive (cf. https://github.com/jaegertracing/jaeger/pull/604)
 	return nil
 }
 
 // CreateSpanReader implements storage.Factory
 func (f *Factory) CreateSpanReader() (spanstore.Reader, error) {
-	return cSpanStore.NewSpanReader(f.primarySession, f.metricsFactory, f.logger), nil
+	cfg := f.Options.GetPrimary()
+	return esSpanStore.NewSpanReader(f.primaryClient, f.logger, cfg.GetMaxSpanAge(), f.metricsFactory), nil
 }
 
 // CreateSpanWriter implements storage.Factory
 func (f *Factory) CreateSpanWriter() (spanstore.Writer, error) {
-	return cSpanStore.NewSpanWriter(f.primarySession, f.Options.SpanStoreWriteCacheTTL, f.metricsFactory, f.logger), nil
+	cfg := f.Options.GetPrimary()
+	return esSpanStore.NewSpanWriter(f.primaryClient, f.logger, f.metricsFactory, cfg.GetNumShards(), cfg.GetNumReplicas()), nil
 }
 
 // CreateDependencyReader implements storage.Factory
 func (f *Factory) CreateDependencyReader() (dependencystore.Reader, error) {
-	return cDepStore.NewDependencyStore(f.primarySession, f.Options.DepStoreDataFrequency, f.metricsFactory, f.logger), nil
+	return esDepStore.NewDependencyStore(f.primaryClient, f.logger), nil
 }

@@ -12,13 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package builder
+package es
 
 import (
-	"github.com/jaegertracing/jaeger/storage/spanstore/memory"
+	"testing"
+
+	"github.com/jaegertracing/jaeger/storage"
 )
 
-func (sb *StorageBuilder) newMemoryStoreBuilder(memStore *memory.Store) {
-	sb.SpanReader = memStore
-	sb.DependencyReader = memStore
+var _ storage.Factory = new(Factory)
+
+func TestFactory(t *testing.T) {
+	NewFactory()
 }

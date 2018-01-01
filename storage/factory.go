@@ -31,14 +31,14 @@ import (
 type Factory interface {
 	// Initialize performs internal initialization of the factory, such as opening connections to the backend store.
 	// It is called after all configuration of the factory itself has been done.
-	Initialize() error
+	Initialize(metricsFactory metrics.Factory, logger *zap.Logger) error
 
-	// SpanReader creates a spanstore.Reader.
-	SpanReader(metricsFactory metrics.Factory, logger *zap.Logger) (spanstore.Reader, error)
+	// CreateSpanReader creates a spanstore.Reader.
+	CreateSpanReader() (spanstore.Reader, error)
 
-	// SpanWriter creates a spanstore.Writer.
-	SpanWriter(metricsFactory metrics.Factory, logger *zap.Logger) (spanstore.Writer, error)
+	// CreateSpanWriter creates a spanstore.Writer.
+	CreateSpanWriter() (spanstore.Writer, error)
 
-	// DependencyReader creates a dependencystore.Reader.
-	DependencyReader(metricsFactory metrics.Factory, logger *zap.Logger) (dependencystore.Reader, error)
+	// CreateDependencyReader creates a dependencystore.Reader.
+	CreateDependencyReader() (dependencystore.Reader, error)
 }
