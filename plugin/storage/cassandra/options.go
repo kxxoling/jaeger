@@ -180,15 +180,15 @@ func addFlags(flagSet *flag.FlagSet, nsConfig *namespaceConfig) {
 
 // InitFromViper initializes Options with properties from viper
 func (opt *Options) InitFromViper(v *viper.Viper) {
-	initNamespaceFromViper(opt.primary, v)
+	opt.primary.initFromViper(v)
 	for _, cfg := range opt.others {
-		initNamespaceFromViper(cfg, v)
+		cfg.initFromViper(v)
 	}
 	opt.SpanStoreWriteCacheTTL = v.GetDuration(opt.primary.namespace + suffixSpanStoreWriteCacheTTL)
 	opt.DepStoreDataFrequency = v.GetDuration(opt.primary.namespace + suffixDepStoreDataFrequency)
 }
 
-func initNamespaceFromViper(cfg *namespaceConfig, v *viper.Viper) {
+func (cfg *namespaceConfig) initFromViper(v *viper.Viper) {
 	cfg.ConnectionsPerHost = v.GetInt(cfg.namespace + suffixConnPerHost)
 	cfg.MaxRetryAttempts = v.GetInt(cfg.namespace + suffixMaxRetryAttempts)
 	cfg.Timeout = v.GetDuration(cfg.namespace + suffixTimeout)

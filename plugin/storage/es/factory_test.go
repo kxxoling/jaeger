@@ -20,12 +20,12 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/uber/jaeger-lib/metrics"
+	"go.uber.org/zap"
 
 	"github.com/jaegertracing/jaeger/pkg/config"
 	"github.com/jaegertracing/jaeger/pkg/es"
 	escfg "github.com/jaegertracing/jaeger/pkg/es/config"
 	"github.com/jaegertracing/jaeger/pkg/es/mocks"
-	"github.com/jaegertracing/jaeger/pkg/testutils"
 	"github.com/jaegertracing/jaeger/storage"
 )
 
@@ -43,20 +43,19 @@ func (m *mockClientBuilder) NewClient() (es.Client, error) {
 	return nil, m.err
 }
 
-func TestFactory(t *testing.T) {
+func TestElasticsearchFactory(t *testing.T) {
 	f := NewFactory()
 	v, command := config.Viperize(f.AddFlags)
 	command.ParseFlags([]string{})
 	f.InitFromViper(v)
 
-	logger, _ := testutils.NewLogger()
-	// after InitFromViper, f.primaryConfig points to a real sssion builder that will fail in unit tests
-	// so we override it with mock
+	// after InitFromViper, f.primaryConfig points to a real session builder that will fail in unit tests,
+	// so we override it with a mock.
 	f.primaryConfig = &mockClientBuilder{err: errors.New("made-up error")}
-	assert.EqualError(t, f.Initialize(metrics.NullFactory, logger), "made-up error")
+	assert.EqualError(t, f.Initialize(metrics.NullFactory, zap.NewNop()), "made-up error")
 
 	f.primaryConfig = &mockClientBuilder{}
-	assert.NoError(t, f.Initialize(metrics.NullFactory, logger))
+	assert.NoError(t, f.Initialize(metrics.NullFactory, zap.NewNop()))
 
 	_, err := f.CreateSpanReader()
 	assert.NoError(t, err)
